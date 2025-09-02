@@ -1,5 +1,4 @@
 from pathlib import Path
-import json
 from pypdf import PdfReader
 import streamlit as st
 import random
@@ -180,24 +179,23 @@ if __name__ == "__main__":
 
 
             spent_reaches = 0
-            col1, col2, col3, col4 = st.columns(4)
+            advanced_factors = st.multiselect("Select spell factors you would like to spend a reach on to use advanced tables", ("Potency", "Duration", "Scale", "Casting time", "Range")) 
+            col1, col2, col3 = st.columns(3)
             with col1:
-                advanced_duration = st.selectbox("Spend a reach on advanced duration?", ("Yes", "No"), index=1)
                 duration_penalty = st.number_input("Sacrifice dice for improved duration", step=2, min_value=0, max_value=10)
                 duration_bonus=0
                 if psf == "Duration":
                     duration_bonus = data[arcanum]-1
                 duration_options = ["1 turn", "2 turns", "3 turns", "5 turns", "10 turns", "20 turns"]
-                if advanced_duration == "Yes":
+                if "Duration" in advanced_factors:
                     duration_options = ["1 scene/hour", "1 day", "1 week", "1 month", "1 year", "Indefinite (costs 1 mana)"]
                 duration = duration_options[min(len(duration_options)-1, duration_bonus+duration_penalty//2)]
                 st.write(f"Your spell will last for " + duration)
             with col2:
-                advanced_scale = st.selectbox("Spend a reach on advanced scale?", ("Yes", "No"), index=1)
                 scale_penalty = st.number_input("Sacrifice dice for improved scale", step=2, min_value=0, max_value=10)
                 scale_options = ["(1, 5, arm's reach from a central point)", "(2, 6, a small room)", "(4, 7, a large room)",
                                 "(8, 8, several rooms, or a single floor of a house)", "(16, 9, a ballroom or small house)"]
-                if advanced_scale == "Yes":
+                if "Scale" in advanced_factors:
                     scale_options = ["(5, 10, a large house or building)", "(10, 10, a small warehouse or parking lot)",
                                     "(20, 15, a large warehouse or supermarket)", 
                                     "(40, 20, a small factory, or a shopping mall)", "(80, 25, a large factory, or a city block)",
@@ -207,67 +205,62 @@ if __name__ == "__main__":
                 st.write(scale)
             with col3:
                 potency = 1
-                advanced_potency = st.selectbox("Spend a reach on advanced potency?", ("Yes", "No"), index=1)
                 if psf == "Potency":
                     potency += data[arcanum]-1
                 potency_penalty = st.number_input("Sacrifice dice for improved potency", step=2, min_value=0, max_value=100)
                 st.write(f"Your spell with have potency {potency + potency_penalty//2}")  
-            with col4:
-                advanced_casting_time = st.selectbox("Spend a reach on advanced casting time?", ("Yes", "No"), index=1)
-                if advanced_casting_time == "No":
-                    casting_times = ["3 hours", "1 hour", "30 minutes", "10 minutes", "1 minute"]
-                    st.write(f"You spell will take {casting_times[(data['Gnosis']-1)//2]} to cast")
-                else:
-                    st.write(f"You spell will take 1 turn to cast")
 
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                advanced_range = st.selectbox("Spend a reach on advanced range?", ("Yes", "No"), index=1)
-            with col2:    
+            col1, col2 = st.columns(2)
+            with col1:    
                 extra_reaches = st.number_input("Other than improving spell factors, how many extra reaches do you want to spend?", step = 1, min_value = 0)
-            with col3:    
+            with col2:    
                 extra_dice = st.number_input("Would you like to add any dice to your dice pool for some unforseeable reason?", step = 1)
 
-            advanced_reaches = sum([advanced_duration == "Yes", advanced_potency == "Yes", advanced_scale == "Yes", advanced_casting_time == "Yes", advanced_range == "Yes"])
+            advanced_reaches = len(advanced_factors)
+
+            yantra_options = ["Demesne +2", "Environment +1", 
+                                        "Supernal verge +2", "Concentration +2", 
+                                        "Mantra +2", "Runes +2", "Tool +1", 
+                                        "Material sympathy +2", "Representational sympathy +1", 
+                                        "Sacrament +1", "Sacrament +2", "Sacrament +3", "Persona", 
+                                        "Dedicated magical tool +1", "Cleansing +2"]
+            if rote == "Yes":
+                yantra_options.append("Mudra")
+                skill_used_for_rote = st.selectbox("Choose the skill associated to your rote", tuple(skills))
+            yantras = st.multiselect('Yantra', yantra_options, 
+                                            accept_new_options=True)
+            if len(yantras) > (data['Gnosis']-1)//2 + 2:
+                st.write(f"Hey, you're only allowed to have {(data['Gnosis']-1)//2 + 2} yantra. You need to increase your gnosis if you want to use more.")
+            dice_pool = data['Gnosis'] + data[arcanum]
+            dice_pool -= scale_penalty + duration_penalty + potency_penalty
+            for yantra in yantras:
+                if yantra == "Mudra":
+                    mudra_skill = st.selectbox("Which skill is the mudra associated to?", tuple(skills))
+                    if data["Rote_" + mudra_skill] != 0:
+                        dice_pool += 1
+                    dice_pool += data[mudra_skill]
+                elif yantra == "Persona":
+                    dice_pool += st.number_input("Please tell me how many dice your persona yantra gives you. " \
+                    "I cannot be bothered to iterate over every single merit row in your sheet, check if its name is 'Shadow name'," \
+                    " check its dots if so, do the same for the merit 'Cabal Theme', and add these two merits' dots together. Just tell me.", min_value=1, max_value=4, step=1)
+                else:
+                    dice_pool += int(yantra.split("+")[1])
             
-            col1, col2 = st.columns(2)
-            with col1:
-                yantra_options = ["Demesne +2", "Environment +1", 
-                                            "Supernal verge +2", "Concentration +2", 
-                                            "Mantra +2", "Runes +2", "Tool +1", 
-                                            "Material sympathy +2", "Representational sympathy +1", 
-                                            "Sacrament +1", "Sacrament +2", "Sacrament +3", "Persona", 
-                                            "Dedicated magical tool +1", "Cleansing +2"]
-                if rote == "Yes":
-                    yantra_options.append("Mudra")
-                    skill_used_for_rote = st.selectbox("Choose the skill associated to your rote", tuple(skills))
-                yantras = st.multiselect('Yantra', yantra_options, 
-                                                accept_new_options=True)
-                if len(yantras) > (data['Gnosis']-1)//2 + 2:
-                    st.write(f"Hey, you're only allowed to have {(data['Gnosis']-1)//2 + 2} yantra. You need to increase your gnosis if you want to use more.")
-                dice_pool = data['Gnosis'] + data[arcanum]
-                dice_pool -= scale_penalty + duration_penalty + potency_penalty
-                for yantra in yantras:
-                    if yantra == "Mudra":
-                        mudra_skill = st.selectbox("Which skill is the mudra associated to?", tuple(skills))
-                        if data["Rote_" + mudra_skill] != 0:
-                            dice_pool += 1
-                        dice_pool += data[mudra_skill]
-                    elif yantra == "Persona":
-                        dice_pool += st.number_input("Please tell me how many dice your persona yantra gives you. " \
-                        "I cannot be bothered to iterate over every single merit row in your sheet, check if its name is 'Shadow name'," \
-                        " check its dots if so, do the same for the merit 'Cabal Theme', and add all these two merits' dots together. Just tell me.", min_value=1, max_value=4, step=1)
-                    else:
-                        dice_pool += int(yantra.split("+")[1])
-            with col2:
-                if rote == "No":
-                    if advanced_reaches+extra_reaches <= data[arcanum] - level + 1:
-                        st.write(f"You have spent {advanced_reaches+extra_reaches} reaches, and you can safely use {data[arcanum] - level + 1}.")
-                    else:
-                        dmt = 0
-                        if "Dedicated magical tool +1" in yantras:
-                            dmt -= 2
-                        st.write(f"You have spent {advanced_reaches+extra_reaches} reaches, but you can only safely use {data[arcanum] - level + 1}. You should have your storyteller roll {advanced_reaches+extra_reaches - (data[arcanum] - level + 1) + dmt} paradox dice.")
+            if rote == "No":
+                if advanced_reaches+extra_reaches <= data[arcanum] - level + 1:
+                    st.write(f"You have spent {advanced_reaches+extra_reaches} reaches, and you can safely use {data[arcanum] - level + 1}.")
+                else:
+                    dmt = 0
+                    if "Dedicated magical tool +1" in yantras:
+                        dmt -= 2
+                    st.write(f"You have spent {advanced_reaches+extra_reaches} reaches, but you can only safely use {data[arcanum] - level + 1}. You should have your storyteller roll {advanced_reaches+extra_reaches - (data[arcanum] - level + 1) + dmt} paradox dice.")
+
+
+            if not "Casting time" in advanced_factors:
+                casting_times = ["3 hours", "1 hour", "30 minutes", "10 minutes", "1 minute"]
+                st.write(f"Your spell will take {casting_times[(data['Gnosis']-1)//2]} to cast")
+            else:
+                st.write(f"Your spell will take {max(len(yantras),1)} turn(s) to cast.")
 
             if dice_pool + extra_dice > 0:
                 n_again = st.number_input(f"Press the button below to roll dice. You have {dice_pool+extra_dice} dice. Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, step=1)     
@@ -287,7 +280,3 @@ if __name__ == "__main__":
                         st.write("You rolled a 1 and got a dramatic failure.")
                     else:
                         st.write(f"You rolled a {result} and your spell fails.")
-
-        
-
-        
