@@ -2,6 +2,9 @@ from pathlib import Path
 from pypdf import PdfReader
 import streamlit as st
 import random
+import json
+import datetime
+import time
 
 path = "./"
 PDF_PATH = Path(path + "Solmyr.pdf")
@@ -138,6 +141,61 @@ def roll(n, n_again = 10):
         result = result + roll(len(list(filter(lambda x: x>= n_again, result))), n_again=n_again)
     return result
 
+def add_roll_to_log_json(player_name, dice_count, result, successes):
+    log_file = Path("dice_log.json")
+    
+    # Load existing log or create empty list
+    if log_file.exists():
+        with open(log_file, "r") as f:
+            log = json.load(f)
+    else:
+        log = []
+    
+    # Add new roll
+    log.append({
+        "timestamp": datetime.now().isoformat(),
+        "player": player_name,
+        "dice_count": dice_count,
+        "result": result,
+        "successes": successes
+    })
+    
+    # Keep only last 50 rolls to prevent file from growing too large
+    log = log[-50:]
+    
+    # Save back to file
+    with open(log_file, "w") as f:
+        json.dump(log, f)
+
+def get_dice_log_json():
+    log_file = Path("dice_log.json")
+    if log_file.exists():
+        with open(log_file, "r") as f:
+            return json.load(f)
+    return []
+
+def display_shared_dice_log():
+    st.subheader("Shared Dice Log")
+    
+    # Auto-refresh every 5 seconds
+    if st.checkbox("Auto-refresh log", value=True):
+        time.sleep(0.1)  # Small delay to prevent too frequent updates
+        st.rerun()
+    
+    # Manual refresh button
+    if st.button("🔄 Refresh Log"):
+        st.rerun()
+    
+    # Get and display log (using JSON version here)
+    log = get_dice_log_json()
+    
+    if log:
+        for roll in reversed(log[-10:]):  # Show last 10 rolls
+            timestamp = datetime.fromisoformat(roll["timestamp"]).strftime("%H:%M:%S")
+            st.write(f"**{roll['player']}** ({timestamp}): Rolled {roll['dice_count']} dice → {roll['result']} → **{roll['successes']} successes**")
+    else:
+        st.write("No dice rolls yet!")
+
 if __name__ == "__main__":
     skills = ["Academics", "Computer", "Crafts", "Investigation", "Medicine", "Occult", "Politics", "Science",
               "Athletics", "Brawl", "Drive", "Firearms", "Larceny", "Stealth", "Survival", "Weapons",
@@ -160,7 +218,7 @@ if __name__ == "__main__":
 
         tab1, tab2 = st.tabs([
             "Cast a spell",
-            "Eat lettuce"
+            "Roll dice"
         ])
         with tab1:
             col_1, col_2, col_3, col_4 = st.columns(4)
@@ -280,3 +338,6 @@ if __name__ == "__main__":
                         st.write("You rolled a 1 and got a dramatic failure.")
                     else:
                         st.write(f"You rolled a {result} and your spell fails.")
+
+            with tab2:
+                display_shared_dice_log()
