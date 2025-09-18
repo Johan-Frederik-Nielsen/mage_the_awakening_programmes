@@ -128,7 +128,7 @@ def load_sheet(pdf_path: Path):
     final_data["Composure"]+=1    
     for key in relevant_data.keys():
         for value in relevant_data[key]:
-            if data[value] != None:
+            if data[value] != None and data[value] != "/Off":
                 final_data[key] +=1
     
     return final_data
@@ -153,7 +153,7 @@ def add_roll_to_log_json(player_name, dice_count, result, successes):
     
     # Add new roll
     log.append({
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.datetime.now().isoformat(),
         "player": player_name,
         "dice_count": dice_count,
         "result": result,
@@ -177,13 +177,8 @@ def get_dice_log_json():
 def display_shared_dice_log():
     st.subheader("Shared Dice Log")
     
-    # Auto-refresh every 5 seconds
-    if st.checkbox("Auto-refresh log", value=True):
-        time.sleep(0.1)  # Small delay to prevent too frequent updates
-        st.rerun()
-    
     # Manual refresh button
-    if st.button("🔄 Refresh Log"):
+    if st.button("Refresh Log"):
         st.rerun()
     
     # Get and display log (using JSON version here)
@@ -191,8 +186,8 @@ def display_shared_dice_log():
     
     if log:
         for roll in reversed(log[-10:]):  # Show last 10 rolls
-            timestamp = datetime.fromisoformat(roll["timestamp"]).strftime("%H:%M:%S")
-            st.write(f"**{roll['player']}** ({timestamp}): Rolled {roll['dice_count']} dice → {roll['result']} → **{roll['successes']} successes**")
+            timestamp = datetime.datetime.fromisoformat(roll["timestamp"]).strftime("%H:%M:%S")
+            st.write(f"**{roll['player']}** ({timestamp}): Rolled {roll['dice_count']} {"dice" if roll['dice_count'] > 1 else "die"} {tuple(roll['result'])} and got **{roll['successes']} {"successes" if roll['successes'] != 1 else "succes"}**")
     else:
         st.write("No dice rolls yet!")
 
@@ -215,6 +210,8 @@ if __name__ == "__main__":
     
     if pdf_file != None:
         data = load_sheet(tmp)
+        player_name = pdf_file.name.split(".")[0]
+
 
         tab1, tab2 = st.tabs([
             "Cast a spell",
@@ -321,9 +318,12 @@ if __name__ == "__main__":
                 st.write(f"Your spell will take {max(len(yantras),1)} turn(s) to cast.")
 
             if dice_pool + extra_dice > 0:
-                n_again = st.number_input(f"Press the button below to roll dice. You have {dice_pool+extra_dice} dice. Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, step=1)     
-                if st.button("Roll dice"):
+                n_again = st.number_input(f"Press the button below to roll dice. You have {dice_pool+extra_dice} dice. Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, step=1, value=10)     
+                if st.button("Roll dice", key="roll1"):
                     result = roll(dice_pool+extra_dice, n_again)
+
+                    add_roll_to_log_json(player_name, dice_pool+extra_dice, result, len(list(filter(lambda x: x>= 8, result))))
+
                     if len(list(filter(lambda x: x>= 8, result))) > 0:
                         st.write(f"You rolled {result}, meaning you get {len(list(filter(lambda x: x>= 8, result)))} successes.")
                     else:
@@ -340,4 +340,18 @@ if __name__ == "__main__":
                         st.write(f"You rolled a {result} and your spell fails.")
 
             with tab2:
+                dice_pool_2 = 0
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    dice_pool_2 += data[st.selectbox("Select attribute", attributes)]
+                with col2:
+                    dice_pool_2 += data[st.selectbox("Select skill", skills)]
+                with col3:
+                    dice_pool_2 += st.number_input("Add extra dice", value = 0, step = 1)
+                with col4:
+                    n = st.number_input(f"Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, value=10, step=1)
+                st.write(f"You currently have {dice_pool_2} {"dice" if dice_pool_2 != 1 else "die"}.")
+                if st.button("Roll dice", key="roll2"):
+                    result_2 = roll(dice_pool_2, n)
+                    add_roll_to_log_json(player_name, dice_pool_2, result_2, len(list(filter(lambda x: x>= 8, result_2))))
                 display_shared_dice_log()
