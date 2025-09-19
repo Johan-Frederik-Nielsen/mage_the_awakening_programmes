@@ -141,7 +141,7 @@ def roll(n, n_again = 10):
         result = result + roll(len(list(filter(lambda x: x>= n_again, result))), n_again=n_again)
     return result
 
-def add_roll_to_log_json(player_name, dice_count, result, successes):
+def add_roll_to_log_json(player_name, dice_count, result, successes, description=""):
     log_file = Path("dice_log.json")
     
     # Load existing log or create empty list
@@ -153,6 +153,7 @@ def add_roll_to_log_json(player_name, dice_count, result, successes):
     
     # Add new roll
     log.append({
+        "description": description,
         "timestamp": datetime.datetime.now().isoformat(),
         "player": player_name,
         "dice_count": dice_count,
@@ -175,7 +176,6 @@ def get_dice_log_json():
     return []
 
 def display_shared_dice_log():
-    st.subheader("Shared Dice Log")
     
     # Manual refresh button
     if st.button("Refresh Log"):
@@ -187,7 +187,7 @@ def display_shared_dice_log():
     if log:
         for roll in reversed(log[-10:]):  # Show last 10 rolls
             timestamp = datetime.datetime.fromisoformat(roll["timestamp"]).strftime("%H:%M:%S")
-            st.write(f"**{roll['player']}** ({timestamp}): Rolled {roll['dice_count']} {"dice" if roll['dice_count'] > 1 else "die"} {tuple(roll['result'])} and got **{roll['successes']} {"successes" if roll['successes'] != 1 else "succes"}**")
+            st.write(f"**{roll['player']}** ({timestamp}): Rolled {roll['dice_count']} {"dice" if roll['dice_count'] > 1 else "die"} {"on " + roll['description'] if roll['description'] != "" else ""} {tuple(roll['result'])} and got **{roll['successes']} {"successes" if roll['successes'] != 1 else "success"}**")
     else:
         st.write("No dice rolls yet!")
 
@@ -196,8 +196,8 @@ if __name__ == "__main__":
               "Athletics", "Brawl", "Drive", "Firearms", "Larceny", "Stealth", "Survival", "Weapons",
               "Animal ken", "Empathy", "Expression", "Intimidation", "Persuasion", "Socialize", "Streetwise", "Subterfuge"]
     attributes = ["Intelligence", "Wits", "Resolve", "Strength", "Dexterity", "Stamina", "Presence", "Manipulation", "Composure"]
-    st.set_page_config(page_title="Mage: The Awakening - Sheet Helper", page_icon="", layout="wide")
-    st.title("Mage: The Awakening - Sheet Helper")
+    st.set_page_config(page_title="Mage: The Awakening", page_icon="", layout="wide")
+    st.title("Mage: The Awakening")
 
     with st.sidebar:
         st.header("Load sheet data")
@@ -322,7 +322,7 @@ if __name__ == "__main__":
                 if st.button("Roll dice", key="roll1"):
                     result = roll(dice_pool+extra_dice, n_again)
 
-                    add_roll_to_log_json(player_name, dice_pool+extra_dice, result, len(list(filter(lambda x: x>= 8, result))))
+                    add_roll_to_log_json(player_name, dice_pool+extra_dice, result, len(list(filter(lambda x: x>= 8, result))), "casting a spell")
 
                     if len(list(filter(lambda x: x>= 8, result))) > 0:
                         st.write(f"You rolled {result}, meaning you get {len(list(filter(lambda x: x>= 8, result)))} successes.")
@@ -341,17 +341,23 @@ if __name__ == "__main__":
 
             with tab2:
                 dice_pool_2 = 0
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
-                    dice_pool_2 += data[st.selectbox("Select attribute", attributes)]
+                    attribute_2 = st.selectbox("Select attribute", attributes)
+                    dice_pool_2 += data[attribute_2]
                 with col2:
-                    dice_pool_2 += data[st.selectbox("Select skill", skills)]
+                    skill_2 = st.selectbox("Select skill", skills)
+                    dice_pool_2 += data[skill_2]
                 with col3:
                     dice_pool_2 += st.number_input("Add extra dice", value = 0, step = 1)
                 with col4:
                     n = st.number_input(f"Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, value=10, step=1)
+                with col5:
+                    rote_2 = st.selectbox("Does your roll have the rote quality?", ["Yes", "No"], index = 1)
                 st.write(f"You currently have {dice_pool_2} {"dice" if dice_pool_2 != 1 else "die"}.")
                 if st.button("Roll dice", key="roll2"):
                     result_2 = roll(dice_pool_2, n)
-                    add_roll_to_log_json(player_name, dice_pool_2, result_2, len(list(filter(lambda x: x>= 8, result_2))))
+                    if rote_2 == "Yes":
+                        result_2 = result_2 + roll(len(list(filter(lambda x: x< 8, result_2[:dice_pool_2]))), n)
+                    add_roll_to_log_json(player_name, dice_pool_2, result_2, len(list(filter(lambda x: x>= 8, result_2))), attribute_2 + "+" + skill_2)
                 display_shared_dice_log()
