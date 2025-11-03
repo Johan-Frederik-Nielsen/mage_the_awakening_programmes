@@ -213,9 +213,10 @@ if __name__ == "__main__":
         player_name = pdf_file.name.split(".")[0]
 
 
-        tab1, tab2 = st.tabs([
+        tab1, tab2, tab3 = st.tabs([
             "Cast a spell",
-            "Roll dice"
+            "Roll dice",
+            "Fine, here's a tab for rolling attributes"
         ])
         with tab1:
             col_1, col_2, col_3, col_4 = st.columns(4)
@@ -350,6 +351,26 @@ if __name__ == "__main__":
                     dice_pool_2 += data[skill_2]
                 with col3:
                     dice_pool_2 += st.number_input("Add extra dice", value = 0, step = 1)
+                with col4:
+                    n = st.number_input(f"Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, value=10, step=1)
+                with col5:
+                    rote_2 = st.selectbox("Does your roll have the rote quality?", ["Yes", "No"], index = 1)
+                st.write(f"You currently have {dice_pool_2} {"dice" if dice_pool_2 != 1 else "die"}.")
+                if st.button("Roll dice", key="roll2"):
+                    result_2 = roll(dice_pool_2, n)
+                    if rote_2 == "Yes":
+                        result_2 = result_2 + roll(len(list(filter(lambda x: x< 8, result_2[:dice_pool_2]))), n)
+                    add_roll_to_log_json(player_name, dice_pool_2, result_2, len(list(filter(lambda x: x>= 8, result_2))), attribute_2 + "+" + skill_2)
+                display_shared_dice_log()
+            with tab3:
+                dice_pool_3 = 0
+                col1, col2, col3, col4, col5 = st.columns(5)
+                with col1:
+                    attributes_3 = st.selectbox("Select attribute", attributes)
+                with col2:
+                    attributes_4 = st.selectbox("I don't know if you can believe this, but select attribute again", attributes)
+                with col3:
+                    dice_pool_3 += st.number_input("Add extra dice", value = 0, step = 1)
                 with col4:
                     n = st.number_input(f"Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, value=10, step=1)
                 with col5:
