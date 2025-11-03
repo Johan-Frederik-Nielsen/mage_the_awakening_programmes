@@ -381,6 +381,6 @@ if __name__ == "__main__":
                 if st.button("Roll dice", key="roll3"):
                     result_2 = roll(dice_pool_3, n)
                     if rote_2 == "Yes":
-                        result_2 = result_2 + roll(len(list(filter(lambda x: x< 8, result_2[:dice_pool_3]))), n)
-                    add_roll_to_log_json(player_name, dice_pool_3, result_2, len(list(filter(lambda x: x>= 8, result_2))), attribute_2 + "+" + skill_2)
+                        result_2 = result_2 + roll(len(list(filter(lambda x: x< 8, result_2[:dice_pool_2]))), n)
+                    add_roll_to_log_json(player_name, dice_pool_3, result_2, len(list(filter(lambda x: x>= 8, result_2))), attribute_3 + "+" + attribute_4)
                 display_shared_dice_log("key2")
