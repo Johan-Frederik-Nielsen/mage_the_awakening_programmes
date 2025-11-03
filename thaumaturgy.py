@@ -175,10 +175,10 @@ def get_dice_log_json():
             return json.load(f)
     return []
 
-def display_shared_dice_log():
+def display_shared_dice_log(keyname):
     
     # Manual refresh button
-    if st.button("Refresh Log"):
+    if st.button("Refresh Log", key = keyname):
         st.rerun()
     
     # Get and display log (using JSON version here)
@@ -361,24 +361,26 @@ if __name__ == "__main__":
                     if rote_2 == "Yes":
                         result_2 = result_2 + roll(len(list(filter(lambda x: x< 8, result_2[:dice_pool_2]))), n)
                     add_roll_to_log_json(player_name, dice_pool_2, result_2, len(list(filter(lambda x: x>= 8, result_2))), attribute_2 + "+" + skill_2)
-                display_shared_dice_log()
+                display_shared_dice_log("key1")
             with tab3:
                 dice_pool_3 = 0
                 col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
-                    attributes_3 = st.selectbox("Select attribute", attributes)
+                    attribute_3 = st.selectbox("Select attribute", attributes, key = "attribute1")
+                    dice_pool_3 += data[attribute_3]
                 with col2:
-                    attributes_4 = st.selectbox("I don't know if you can believe this, but select attribute again", attributes)
+                    attribute_4 = st.selectbox("I don't know if you can believe this, but select attribute again", attributes, key = "attribute2")
+                    dice_pool_3 += data[attribute_4]
                 with col3:
-                    dice_pool_3 += st.number_input("Add extra dice", value = 0, step = 1)
+                    dice_pool_3 += st.number_input("Add extra dice", value = 0, step = 1, key = "extradice3")
                 with col4:
-                    n = st.number_input(f"Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, value=10, step=1)
+                    n = st.number_input(f"Write here whether you have 8, 9, or 10-again.", min_value=8, max_value=10, value=10, step=1, key = "nagain3")
                 with col5:
-                    rote_2 = st.selectbox("Does your roll have the rote quality?", ["Yes", "No"], index = 1)
-                st.write(f"You currently have {dice_pool_2} {"dice" if dice_pool_2 != 1 else "die"}.")
-                if st.button("Roll dice", key="roll2"):
-                    result_2 = roll(dice_pool_2, n)
+                    rote_2 = st.selectbox("Does your roll have the rote quality?", ["Yes", "No"], index = 1, key = "rote3")
+                st.write(f"You currently have {dice_pool_3} {"dice" if dice_pool_3 != 1 else "die"}.")
+                if st.button("Roll dice", key="roll3"):
+                    result_2 = roll(dice_pool_3, n)
                     if rote_2 == "Yes":
-                        result_2 = result_2 + roll(len(list(filter(lambda x: x< 8, result_2[:dice_pool_2]))), n)
-                    add_roll_to_log_json(player_name, dice_pool_2, result_2, len(list(filter(lambda x: x>= 8, result_2))), attribute_2 + "+" + skill_2)
-                display_shared_dice_log()
+                        result_2 = result_2 + roll(len(list(filter(lambda x: x< 8, result_2[:dice_pool_3]))), n)
+                    add_roll_to_log_json(player_name, dice_pool_3, result_2, len(list(filter(lambda x: x>= 8, result_2))), attribute_2 + "+" + skill_2)
+                display_shared_dice_log("key2")
